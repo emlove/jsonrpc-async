@@ -10,6 +10,7 @@ import aiohttp.web
 from aiohttp.test_utils import TestClient, unittest_run_loop, setup_test_loop, teardown_test_loop
 import pep8
 
+import jsonrpc_base
 from jsonrpc_async import Server, ProtocolError, TransportError
 
 try:
@@ -64,12 +65,6 @@ class TestJSONRPCClient(TestCase):
         app.router.add_post('/xmlrpc', response_func)
         return app
 
-    def test_length(self):
-        """Verify that this library is really smaller than 100 lines, as stated in README.rst"""
-        with open(inspect.getfile(Server)) as library_file:
-            self.assertLessEqual(len([l for l in library_file.readlines()
-                                      if l.strip()]), 100)
-
     def test_pep8_conformance(self):
         """Test that we conform to PEP8."""
 
@@ -83,37 +78,9 @@ class TestJSONRPCClient(TestCase):
         result = pep8style.check_files(source_files)
         self.assertEqual(result.total_errors, 0, "Found code style errors (and warnings).")
 
-    def test_dumps(self):
-        # test keyword args
-        self.assertSameJSON(
-            '''{"params": {"foo": "bar"}, "jsonrpc": "2.0", "method": "my_method_name", "id": 1}''',
-            self.server.serialize('my_method_name', params={'foo': 'bar'}, is_notification=False)
-        )
-        # test positional args
-        self.assertSameJSON(
-            '''{"params": ["foo", "bar"], "jsonrpc": "2.0", "method": "my_method_name", "id": 1}''',
-            self.server.serialize('my_method_name', params=('foo', 'bar'), is_notification=False)
-        )
-        # test notification
-        self.assertSameJSON(
-            '''{"params": ["foo", "bar"], "jsonrpc": "2.0", "method": "my_method_name"}''',
-            self.server.serialize('my_method_name', params=('foo', 'bar'), is_notification=True)
-        )
-
-    def test_parse_result(self):
-        with self.assertRaisesRegex(ProtocolError, 'Response is not a dictionary'):
-            self.server.parse_result([])
-        with self.assertRaisesRegex(ProtocolError, 'Response without a result field'):
-            self.server.parse_result({})
-        with self.assertRaises(ProtocolError) as protoerror:
-            body = {"jsonrpc": "2.0", "error": {"code": -32601, "message": "Method not found"}, "id": "1"}
-            self.server.parse_result(body)
-        self.assertEqual(protoerror.exception.args[0], -32601)
-        self.assertEqual(protoerror.exception.args[1], 'Method not found')
-
     @unittest_run_loop
     @asyncio.coroutine
-    def test_send_request(self):
+    def test_send_message(self):
         # catch timeout responses
         with self.assertRaises(TransportError) as transport_error:
             @asyncio.coroutine
@@ -126,7 +93,7 @@ class TestJSONRPCClient(TestCase):
                 return aiohttp.web.Response(text='{}', content_type='application/json')
 
             self.handler = handler
-            yield from self.server.send_request('my_method', is_notification=False, params=None)
+            yield from self.server.send_message(jsonrpc_base.Request('my_method', params=None, msg_id=1))
 
         self.assertIsInstance(transport_error.exception.args[1], asyncio.TimeoutError)
 
@@ -137,9 +104,9 @@ class TestJSONRPCClient(TestCase):
                 return aiohttp.web.Response(text='not json', content_type='application/json')
 
             self.handler = handler
-            yield from self.server.send_request('my_method', is_notification=False, params=None)
+            yield from self.server.send_message(jsonrpc_base.Request('my_method', params=None, msg_id=1))
 
-        self.assertEqual(transport_error.exception.args[0], 'Cannot deserialize response body')
+        self.assertEqual(transport_error.exception.args[0], "Error calling method 'my_method': Cannot deserialize response body")
         self.assertIsInstance(transport_error.exception.args[1], ValueError)
 
         # catch non-200 responses
@@ -149,7 +116,7 @@ class TestJSONRPCClient(TestCase):
                 return aiohttp.web.Response(text='{}', content_type='application/json', status=404)
 
             self.handler = handler
-            yield from self.server.send_request('my_method', is_notification=False, params=None)
+            yield from self.server.send_message(jsonrpc_base.Request('my_method', params=None, msg_id=1))
 
         # a notification
         @asyncio.coroutine
@@ -157,14 +124,14 @@ class TestJSONRPCClient(TestCase):
             return aiohttp.web.Response(text='we dont care about this', content_type='application/json')
 
         self.handler = handler
-        yield from self.server.send_request('my_notification', is_notification=True, params=None)
+        yield from self.server.send_message(jsonrpc_base.Request('my_notification', params=None))
 
         # catch aiohttp own exception
         with self.assertRaisesRegex(TransportError, 'aiohttp exception'):
             def callback(method, path, *args, **kwargs):
                 raise aiohttp.ClientResponseError('aiohttp exception')
             self.client.request_callback = callback
-            yield from self.server.send_request('my_method', is_notification=False, params=None)
+            yield from self.server.send_message(jsonrpc_base.Request('my_method', params=None, msg_id=1))
 
     @unittest_run_loop
     @asyncio.coroutine
@@ -174,7 +141,7 @@ class TestJSONRPCClient(TestCase):
                 raise aiohttp.ClientOSError('aiohttp exception')
             self.client.request_callback = callback
             yield from self.server.foo()
-        self.assertEqual(transport_error.exception.args[0], "Error calling method 'foo'")
+        self.assertEqual(transport_error.exception.args[0], "Error calling method 'foo': Transport Error")
         self.assertIsInstance(transport_error.exception.args[1], aiohttp.ClientOSError)
 
     @unittest_run_loop
