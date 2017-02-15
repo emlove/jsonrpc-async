@@ -11,13 +11,13 @@ class Server(jsonrpc_base.Server):
 
     def __init__(self, url, session=None, **post_kwargs):
         super().__init__()
-        session = session or aiohttp.ClientSession()
+        object.__setattr__(self, 'session', session or aiohttp.ClientSession())
         post_kwargs['headers'] = post_kwargs.get('headers', {})
         post_kwargs['headers']['Content-Type'] = post_kwargs['headers'].get(
             'Content-Type', 'application/json')
         post_kwargs['headers']['Accept'] = post_kwargs['headers'].get(
             'Accept', 'application/json-rpc')
-        self._request = functools.partial(session.post, url, **post_kwargs)
+        self._request = functools.partial(self.session.post, url, **post_kwargs)
 
     @asyncio.coroutine
     def send_message(self, message):
