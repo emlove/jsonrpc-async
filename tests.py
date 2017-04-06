@@ -7,7 +7,8 @@ import os
 
 import aiohttp
 import aiohttp.web
-from aiohttp.test_utils import TestClient, unittest_run_loop, setup_test_loop, teardown_test_loop
+import aiohttp.test_utils
+from aiohttp.test_utils import unittest_run_loop, setup_test_loop, teardown_test_loop
 import pep8
 
 import jsonrpc_base
@@ -20,8 +21,8 @@ except ImportError:
     from mock import Mock
 
 class JsonTestClient(aiohttp.test_utils.TestClient):
-    def __init__(self, app_or_server):
-        super().__init__(app_or_server)
+    def __init__(self, app_or_server, **kwargs):
+        super().__init__(app_or_server, **kwargs)
         self.request_callback = None
 
     def request(self, method, path, *args, **kwargs):
@@ -45,10 +46,11 @@ class TestJSONRPCClient(TestCase):
         self.app = self.get_app(self.loop)
 
         @asyncio.coroutine
-        def create_client(app):
-            return JsonTestClient(app)
+        def create_client(app, loop):
+            return JsonTestClient(app, loop=loop)
 
-        self.client = self.loop.run_until_complete(create_client(self.app))
+        self.client = self.loop.run_until_complete(
+            create_client(self.app, self.loop))
         self.loop.run_until_complete(self.client.start_server())
         random.randint = Mock(return_value=1)
         self.server = Server('/xmlrpc', session=self.client, timeout=0.2)
@@ -80,7 +82,7 @@ class TestJSONRPCClient(TestCase):
 
     @unittest_run_loop
     @asyncio.coroutine
-    def test_send_message(self):
+    def test_send_message_timeout(self):
         # catch timeout responses
         with self.assertRaises(TransportError) as transport_error:
             @asyncio.coroutine
@@ -97,6 +99,9 @@ class TestJSONRPCClient(TestCase):
 
         self.assertIsInstance(transport_error.exception.args[1], asyncio.TimeoutError)
 
+    @unittest_run_loop
+    @asyncio.coroutine
+    def test_send_message(self):
         # catch non-json responses
         with self.assertRaises(TransportError) as transport_error:
             @asyncio.coroutine
@@ -129,7 +134,7 @@ class TestJSONRPCClient(TestCase):
         # catch aiohttp own exception
         with self.assertRaisesRegex(TransportError, 'aiohttp exception'):
             def callback(method, path, *args, **kwargs):
-                raise aiohttp.ClientResponseError('aiohttp exception')
+                raise aiohttp.ClientResponseError(message='aiohttp exception')
             self.client.request_callback = callback
             yield from self.server.send_message(jsonrpc_base.Request('my_method', params=None, msg_id=1))
 

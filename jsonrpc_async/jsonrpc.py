@@ -30,19 +30,16 @@ class Server(jsonrpc_base.Server):
         except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
             raise TransportError('Transport Error', message, exc)
 
+        if response.status != 200:
+            raise TransportError('HTTP %d %s' % (response.status, response.reason), message)
+
+        if message.response_id is None:
+            # Message is notification, so no response is expcted.
+            return None
+
         try:
-            if response.status != 200:
-                raise TransportError('HTTP %d %s' % (response.status, response.reason), message)
+            response_data = yield from response.json()
+        except ValueError as value_error:
+            raise TransportError('Cannot deserialize response body', message, value_error)
 
-            if message.response_id is None:
-                # Message is notification, so no response is expcted.
-                return None
-
-            try:
-                response_data = yield from response.json()
-            except ValueError as value_error:
-                raise TransportError('Cannot deserialize response body', message, value_error)
-
-            return message.parse_response(response_data)
-        finally:
-            yield from response.release()
+        return message.parse_response(response_data)

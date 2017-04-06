@@ -9,7 +9,7 @@ except ImportError:
 
 setup(
     name='jsonrpc-async',
-    version='0.4',
+    version='0.6',
     author='Adam Mills',
     author_email='adam@armills.info',
     packages=('jsonrpc_async',),
@@ -20,7 +20,7 @@ setup(
     long_description=open('README.rst').read(),
     install_requires=[
         'jsonrpc-base==1.0',
-        'aiohttp>=1.1.6',
+        'aiohttp>=2.0.0',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
