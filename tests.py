@@ -8,7 +8,8 @@ import os
 import aiohttp
 import aiohttp.web
 import aiohttp.test_utils
-from aiohttp.test_utils import unittest_run_loop, setup_test_loop, teardown_test_loop
+from aiohttp.test_utils import (
+    unittest_run_loop, setup_test_loop, teardown_test_loop, TestServer)
 import pep8
 
 import jsonrpc_base
@@ -21,8 +22,8 @@ except ImportError:
     from mock import Mock
 
 class JsonTestClient(aiohttp.test_utils.TestClient):
-    def __init__(self, app_or_server, **kwargs):
-        super().__init__(app_or_server, **kwargs)
+    def __init__(self, app, **kwargs):
+        super().__init__(TestServer(app), **kwargs)
         self.request_callback = None
 
     def request(self, method, path, *args, **kwargs):
@@ -43,7 +44,7 @@ class TestJSONRPCClient(TestCase):
 
     def setUp(self):
         self.loop = setup_test_loop()
-        self.app = self.get_app(self.loop)
+        self.app = self.get_app()
 
         @asyncio.coroutine
         def create_client(app, loop):
@@ -59,11 +60,11 @@ class TestJSONRPCClient(TestCase):
         self.loop.run_until_complete(self.client.close())
         teardown_test_loop(self.loop)
 
-    def get_app(self, loop):
+    def get_app(self):
         @asyncio.coroutine
         def response_func(request):
             return (yield from self.handler(request))
-        app = aiohttp.web.Application(loop=loop)
+        app = aiohttp.web.Application()
         app.router.add_post('/xmlrpc', response_func)
         return app
 
@@ -134,7 +135,7 @@ class TestJSONRPCClient(TestCase):
         # catch aiohttp own exception
         with self.assertRaisesRegex(TransportError, 'aiohttp exception'):
             def callback(method, path, *args, **kwargs):
-                raise aiohttp.ClientResponseError(message='aiohttp exception')
+                raise aiohttp.ClientResponseError(message='aiohttp exception', request_info=None, history=None)
             self.client.request_callback = callback
             yield from self.server.send_message(jsonrpc_base.Request('my_method', params=None, msg_id=1))
 

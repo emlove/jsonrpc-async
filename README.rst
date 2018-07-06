@@ -11,7 +11,7 @@ This is a compact and simple JSON-RPC client implementation for asyncio python c
 Main Features
 -------------
 
-* Python 3.4, 3.5 & 3.6 compatible
+* Python 3.5 & 3.6 compatible
 * Supports nested namespaces (eg. `app.users.getUsers()`)
 * 100% test coverage
 
@@ -26,16 +26,15 @@ Execute remote JSON-RPC functions
     import asyncio
     from jsonrpc_async import Server
 
-    @asyncio.coroutine
-    def routine():
+    async def routine():
         server = Server('http://localhost:8080')
         try:
-            yield from server.foo(1, 2)
-            yield from server.foo(bar=1, baz=2)
-            yield from server.foo({'foo': 'bar'})
-            yield from server.foo.bar(baz=1, qux=2)
+            await server.foo(1, 2)
+            await server.foo(bar=1, baz=2)
+            await server.foo({'foo': 'bar'})
+            await server.foo.bar(baz=1, qux=2)
         finally:
-            yield from server.session.close()
+            await server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
 
@@ -46,13 +45,12 @@ A notification
     import asyncio
     from jsonrpc_async import Server
 
-    @asyncio.coroutine
-    def routine():
+    async def routine():
         server = Server('http://localhost:8080')
         try:
-            yield from server.foo(bar=1, _notification=True)
+            await server.foo(bar=1, _notification=True)
         finally:
-            yield from server.session.close()
+            await server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
 
@@ -64,16 +62,15 @@ Pass through arguments to aiohttp (see also `aiohttp  documentation <http://aioh
     import aiohttp
     from jsonrpc_async import Server
 
-    @asyncio.coroutine
-    def routine():
+    async def routine():
         server = Server(
             'http://localhost:8080',
             auth=aiohttp.BasicAuth('user', 'pass'),
             headers={'x-test2': 'true'})
         try:
-            yield from server.foo()
+            await server.foo()
         finally:
-            yield from server.session.close()
+            await server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
 
@@ -85,15 +82,14 @@ Pass through aiohttp exceptions
     import aiohttp
     from jsonrpc_async import Server
 
-    @asyncio.coroutine
-    def routine():
+    async def routine():
         server = Server('http://unknown-host')
         try:
-            yield from server.foo()
+            await server.foo()
         except TransportError as transport_error:
             print(transport_error.args[1]) # this will hold a aiohttp exception instance
         finally:
-            yield from server.session.close()
+            await server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
 
