@@ -97,6 +97,13 @@ Tests
 -----
 Install the Python tox package and run ``tox``, it'll test this package with various versions of Python.
 
+Changelog
+---------
+1.0.0 (July 6, 2018)
+~~~~~~~~~~~~~~
+- Bumped minimum aiohttp version to 3.0.0
+- Bumped jsonrpc-base to version 1.0.1
+
 Credits
 -------
 `@gciotta <https://github.com/gciotta>`_ for creating the base project `jsonrpc-requests <https://github.com/gciotta/jsonrpc-requests>`_.
