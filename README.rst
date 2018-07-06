@@ -11,7 +11,7 @@ This is a compact and simple JSON-RPC client implementation for asyncio python c
 Main Features
 -------------
 
-* Python 3.4 & 3.5 compatible
+* Python 3.4, 3.5 & 3.6 compatible
 * Supports nested namespaces (eg. `app.users.getUsers()`)
 * 100% test coverage
 
