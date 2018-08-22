@@ -1,5 +1,6 @@
 import asyncio
 import functools
+import json
 
 import aiohttp
 import jsonrpc_base
@@ -9,7 +10,7 @@ from jsonrpc_base import JSONRPCError, TransportError, ProtocolError
 class Server(jsonrpc_base.Server):
     """A connection to a HTTP JSON-RPC server, backed by aiohttp"""
 
-    def __init__(self, url, session=None, **post_kwargs):
+    def __init__(self, url, session=None, loads=json.loads, **post_kwargs):
         super().__init__()
         object.__setattr__(self, 'session', session or aiohttp.ClientSession())
         post_kwargs['headers'] = post_kwargs.get('headers', {})
@@ -18,6 +19,7 @@ class Server(jsonrpc_base.Server):
         post_kwargs['headers']['Accept'] = post_kwargs['headers'].get(
             'Accept', 'application/json-rpc')
         self._request = functools.partial(self.session.post, url, **post_kwargs)
+        self._loads = loads
 
     @asyncio.coroutine
     def send_message(self, message):
@@ -38,7 +40,7 @@ class Server(jsonrpc_base.Server):
             return None
 
         try:
-            response_data = yield from response.json()
+            response_data = yield from response.json(loads=self._loads)
         except ValueError as value_error:
             raise TransportError('Cannot deserialize response body', message, value_error)
 

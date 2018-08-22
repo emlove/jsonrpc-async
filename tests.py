@@ -1,8 +1,8 @@
 import asyncio
+import mock
 import unittest
 import random
 import json
-import inspect
 import os
 
 import aiohttp
@@ -21,6 +21,7 @@ try:
 except ImportError:
     from mock import Mock
 
+
 class JsonTestClient(aiohttp.test_utils.TestClient):
     def __init__(self, app, **kwargs):
         super().__init__(TestServer(app), **kwargs)
@@ -31,6 +32,7 @@ class JsonTestClient(aiohttp.test_utils.TestClient):
             self.request_callback(method, path, *args, **kwargs)
         return super().request(method, path, *args, **kwargs)
 
+
 class TestCase(unittest.TestCase):
     def assertSameJSON(self, json1, json2):
         """Tells whether two json strings, once decoded, are the same dictionary"""
@@ -40,8 +42,7 @@ class TestCase(unittest.TestCase):
         return super(TestCase, self).assertRaisesRegex(*args, **kwargs)
 
 
-class TestJSONRPCClient(TestCase):
-
+class TestJSONRPCClientBase(TestCase):
     def setUp(self):
         self.loop = setup_test_loop()
         self.app = self.get_app()
@@ -54,7 +55,10 @@ class TestJSONRPCClient(TestCase):
             create_client(self.app, self.loop))
         self.loop.run_until_complete(self.client.start_server())
         random.randint = Mock(return_value=1)
-        self.server = Server('/xmlrpc', session=self.client, timeout=0.2)
+        self.server = self.get_server()
+
+    def get_server(self):
+        return Server('/xmlrpc', session=self.client, timeout=0.2)
 
     def tearDown(self):
         self.loop.run_until_complete(self.client.close())
@@ -68,6 +72,8 @@ class TestJSONRPCClient(TestCase):
         app.router.add_post('/xmlrpc', response_func)
         return app
 
+
+class TestJSONRPCClient(TestJSONRPCClientBase):
     def test_pep8_conformance(self):
         """Test that we conform to PEP8."""
 
@@ -247,6 +253,26 @@ class TestJSONRPCClient(TestCase):
 
         self.handler = handler
         self.assertIsNone((yield from self.server.subtract(42, 23, _notification=True)))
+
+
+class TestJSONRPCClientCustomLoads(TestJSONRPCClientBase):
+    def get_server(self):
+        self.loads_mock = mock.Mock(wraps=json.loads)
+        return Server('/xmlrpc', session=self.client, loads=self.loads_mock, timeout=0.2)
+
+    @unittest_run_loop
+    @asyncio.coroutine
+    def test_custom_loads(self):
+        # rpc call with positional parameters:
+        @asyncio.coroutine
+        def handler1(request):
+            request_message = yield from request.json()
+            self.assertEqual(request_message["params"], [42, 23])
+            return aiohttp.web.Response(text='{"jsonrpc": "2.0", "result": 19, "id": 1}', content_type='application/json')
+
+        self.handler = handler1
+        self.assertEqual((yield from self.server.subtract(42, 23)), 19)
+        self.loads_mock.assert_called_once()
 
 
 if __name__ == '__main__':
