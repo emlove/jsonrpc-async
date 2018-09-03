@@ -266,7 +266,7 @@ class TestJSONRPCClientCustomLoads(TestJSONRPCClientBase):
 
         self.handler = handler1
         self.assertEqual((yield from self.server.subtract(42, 23)), 19)
-        self.loads_mock.assert_called_once()
+        self.assertEqual(self.loads_mock.call_count, 1)
 
 
 if __name__ == '__main__':
