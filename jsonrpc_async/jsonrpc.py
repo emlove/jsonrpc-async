@@ -9,7 +9,7 @@ from jsonrpc_base import JSONRPCError, TransportError, ProtocolError
 class Server(jsonrpc_base.Server):
     """A connection to a HTTP JSON-RPC server, backed by aiohttp"""
 
-    def __init__(self, url, session=None, loads=None, **post_kwargs):
+    def __init__(self, url, session=None, *, loads=None, **post_kwargs):
         super().__init__()
         object.__setattr__(self, 'session', session or aiohttp.ClientSession())
         post_kwargs['headers'] = post_kwargs.get('headers', {})
