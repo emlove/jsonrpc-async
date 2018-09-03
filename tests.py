@@ -1,5 +1,5 @@
 import asyncio
-import mock
+from unittest import mock
 import unittest
 import random
 import json
@@ -14,12 +14,6 @@ import pep8
 
 import jsonrpc_base
 from jsonrpc_async import Server, ProtocolError, TransportError
-
-try:
-    # python 3.3
-    from unittest.mock import Mock
-except ImportError:
-    from mock import Mock
 
 
 class JsonTestClient(aiohttp.test_utils.TestClient):
@@ -54,7 +48,7 @@ class TestJSONRPCClientBase(TestCase):
         self.client = self.loop.run_until_complete(
             create_client(self.app, self.loop))
         self.loop.run_until_complete(self.client.start_server())
-        random.randint = Mock(return_value=1)
+        random.randint = mock.Mock(return_value=1)
         self.server = self.get_server()
 
     def get_server(self):
