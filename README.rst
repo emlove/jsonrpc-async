@@ -99,6 +99,10 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Changelog
 ---------
+1.1.0 (September 4, 2018)
+~~~~~~~~~~~~~~
+- Added support for using a custom json.loads method `(#1) <https://github.com/armills/jsonrpc-async/pull/1>`_ `@tdivis <https://github.com/tdivis>`_
+
 1.0.1 (August 23, 2018)
 ~~~~~~~~~~~~~~
 - Bumped jsonrpc-base to version 1.0.2
