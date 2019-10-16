@@ -23,14 +23,13 @@ class Server(jsonrpc_base.Server):
         if loads is not None:
             self._json_args['loads'] = loads
 
-    @asyncio.coroutine
-    def send_message(self, message):
+    async def send_message(self, message):
         """Send the HTTP message to the server and return the message response.
 
         No result is returned if message is a notification.
         """
         try:
-            response = yield from self._request(data=message.serialize())
+            response = await self._request(data=message.serialize())
         except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
             raise TransportError('Transport Error', message, exc)
 
@@ -42,7 +41,7 @@ class Server(jsonrpc_base.Server):
             return None
 
         try:
-            response_data = yield from response.json(**self._json_args)
+            response_data = await response.json(**self._json_args)
         except ValueError as value_error:
             raise TransportError('Cannot deserialize response body', message, value_error)
 

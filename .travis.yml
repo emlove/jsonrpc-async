@@ -2,10 +2,12 @@ language: python
 python:
   - "3.5"
   - "3.6"
+  - "3.7"
+  - "3.8"
 install:
   - pip install -qr requirements-test.txt
 script:
-  - coverage run tests.py
+  - pytest --cov=jsonrpc_async tests.py
 notifications:
   email: false
 after_success:
