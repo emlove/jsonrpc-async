@@ -1,10 +1,12 @@
 jsonrpc-async: a compact JSON-RPC client library for asyncio
 =======================================================================================================
 
-.. image:: https://travis-ci.org/armills/jsonrpc-async.svg
-    :target: https://travis-ci.org/armills/jsonrpc-async
-.. image:: https://coveralls.io/repos/armills/jsonrpc-async/badge.svg
-    :target: https://coveralls.io/r/armills/jsonrpc-async
+.. image:: https://img.shields.io/pypi/v/jsonrpc-async.svg
+        :target: https://pypi.python.org/pypi/jsonrpc-async
+.. image:: https://github.com/emlove/jsonrpc-async/workflows/tests/badge.svg
+        :target: https://github.com/emlove/jsonrpc-async/actions
+.. image:: https://coveralls.io/repos/emlove/jsonrpc-async/badge.svg
+    :target: https://coveralls.io/r/emlove/jsonrpc-async
 
 This is a compact and simple JSON-RPC client implementation for asyncio python code. This code is forked from https://github.com/gciotta/jsonrpc-requests
 
@@ -105,7 +107,7 @@ Changelog
 
 1.1.0 (September 4, 2018)
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-- Added support for using a custom json.loads method `(#1) <https://github.com/armills/jsonrpc-async/pull/1>`_ `@tdivis <https://github.com/tdivis>`_
+- Added support for using a custom json.loads method `(#1) <https://github.com/emlove/jsonrpc-async/pull/1>`_ `@tdivis <https://github.com/tdivis>`_
 
 1.0.1 (August 23, 2018)
 ~~~~~~~~~~~~~~~~~~~~~~~

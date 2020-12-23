@@ -3,7 +3,7 @@ import functools
 
 import aiohttp
 import jsonrpc_base
-from jsonrpc_base import JSONRPCError, TransportError, ProtocolError
+from jsonrpc_base import TransportError
 
 
 class Server(jsonrpc_base.Server):
@@ -17,7 +17,8 @@ class Server(jsonrpc_base.Server):
             'Content-Type', 'application/json')
         post_kwargs['headers']['Accept'] = post_kwargs['headers'].get(
             'Accept', 'application/json-rpc')
-        self._request = functools.partial(self.session.post, url, **post_kwargs)
+        self._request = functools.partial(
+            self.session.post, url, **post_kwargs)
 
         self._json_args = {}
         if loads is not None:
@@ -34,7 +35,8 @@ class Server(jsonrpc_base.Server):
             raise TransportError('Transport Error', message, exc)
 
         if response.status != 200:
-            raise TransportError('HTTP %d %s' % (response.status, response.reason), message)
+            raise TransportError(
+                'HTTP %d %s' % (response.status, response.reason), message)
 
         if message.response_id is None:
             # Message is notification, so no response is expcted.
@@ -43,6 +45,7 @@ class Server(jsonrpc_base.Server):
         try:
             response_data = await response.json(**self._json_args)
         except ValueError as value_error:
-            raise TransportError('Cannot deserialize response body', message, value_error)
+            raise TransportError(
+                'Cannot deserialize response body', message, value_error)
 
         return message.parse_response(response_data)
