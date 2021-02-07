@@ -67,21 +67,20 @@ class Server(jsonrpc_base.Server):
             raise TransportError('Transport Error', "batch", exc)
 
         if response.status != 200:
-            raise TransportError(
-                    'HTTP %d %s' % (response.status, response.reason), "batch")
+            raise TransportError('HTTP %d %s' % (response.status,
+                                                 response.reason), "batch")
 
         try:
             response_data = await response.json(**self._json_args)
         except ValueError as value_error:
-            raise TransportError(
-                    'Cannot deserialize response body', "batch", value_error)
+            raise TransportError('Cannot deserialize response body', "batch",
+                                 value_error)
         r_data = {resp['id']: resp for resp in response_data}
         return {id_msg[_id]: kw[id_msg[_id]].parse_response(resp)
                 for _id, resp in r_data.items()}
 
     def __getattr__(self, method_name):
-        if method_name.startswith("_"):  # prevent rpc-calls for private
-                                         # methods
+        if method_name.startswith("_"):  # prevent rpc-calls for private methods
             raise AttributeError("invalid attribute '%s'" % method_name)
         return Method(self, self.__register, method_name)
 
@@ -97,8 +96,7 @@ class Method(BaseMethod):
         return self._server.send_message(self.raw(*args, **kwargs))
 
     def __getattr__(self, method_name):
-        if method_name.startswith("_"):  # prevent rpc-calls for private
-                                         # methods
+        if method_name.startswith("_"):  # prevent rpc-calls for private methods
             raise AttributeError("invalid attribute '%s'" % method_name)
         return Method(self._server, self.__register_method,
                       "%s.%s" % (self.__method_name, method_name))

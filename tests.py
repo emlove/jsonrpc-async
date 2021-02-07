@@ -306,11 +306,10 @@ async def test_batch_requests(test_client):
         request_message = await request.json()
         id1 = request_message[0]['id']
         id2 = request_message[1]['id']
-        return aiohttp.web.Response(
-                text='[{"jsonrpc": "2.0", "result": 11, "id": %d},'
-                     '{"jsonrpc": "2.0", "result": 22, "id": %d}]' % (id1,
-                                                                      id2),
-                content_type='application/json')
+        return aiohttp.web.Response(text='[{"jsonrpc": "2.0", "result": 11, '
+                                         '"id": %d},{"jsonrpc": "2.0", "result'
+                                         '": 22, "id": %d}]' % (id1, id2),
+                                    content_type='application/json')
 
     def create_app(loop):
         app = aiohttp.web.Application(loop=loop)
@@ -319,8 +318,6 @@ async def test_batch_requests(test_client):
 
     client = await test_client(create_app)
     server = Server('/', client)
-    x = await server.batch_message(
-                one=server.uno.raw(),
-                two=server.dos.raw())
+    x = await server.batch_message(one=server.uno.raw(), two=server.dos.raw())
     assert x['one'] == 11
     assert x['two'] == 22
