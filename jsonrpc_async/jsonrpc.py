@@ -80,7 +80,8 @@ class Server(jsonrpc_base.Server):
                 for _id, resp in r_data.items()}
 
     def __getattr__(self, method_name):
-        if method_name.startswith("_"):  # prevent rpc-calls for private methods
+        if method_name.startswith("_"):  # prevent rpc-calls for private
+                                         # methods
             raise AttributeError("invalid attribute '%s'" % method_name)
         return Method(self, self.__register, method_name)
 
@@ -96,7 +97,8 @@ class Method(BaseMethod):
         return self._server.send_message(self.raw(*args, **kwargs))
 
     def __getattr__(self, method_name):
-        if method_name.startswith("_"):  # prevent rpc-calls for private methods
+        if method_name.startswith("_"):  # prevent rpc-calls for private
+                                         # methods
             raise AttributeError("invalid attribute '%s'" % method_name)
         return Method(self._server, self.__register_method,
                       "%s.%s" % (self.__method_name, method_name))
@@ -111,10 +113,12 @@ class Method(BaseMethod):
             msg_id = random.randint(1, sys.maxsize)
 
         if args and kwargs:
-            raise ProtocolError('JSON-RPC spec forbids mixing arguments and keyword arguments')
+            raise ProtocolError('JSON-RPC spec forbids mixing arguments and'
+                                ' keyword arguments')
 
         # from the specs:
-        # "If resent, parameters for the rpc call MUST be provided as a Structured value.
+        # "If resent, parameters for the rpc call MUST be provided as a
+        # Structured value.
         #  Either by-position through an Array or by-name through an Object."
         if len(args) == 1 and isinstance(args[0], collections.abc.Mapping):
             args = dict(args[0])

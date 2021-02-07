@@ -7,7 +7,6 @@ import aiohttp
 import aiohttp.web
 import aiohttp.test_utils
 
-import jsonrpc_base
 from jsonrpc_async import Server, ProtocolError, TransportError
 from jsonrpc_async.jsonrpc import Request
 
@@ -309,7 +308,8 @@ async def test_batch_requests(test_client):
         id2 = request_message[1]['id']
         return aiohttp.web.Response(
                 text='[{"jsonrpc": "2.0", "result": 11, "id": %d},'
-                     '{"jsonrpc": "2.0", "result": 22, "id": %d}]'%(id1, id2),
+                     '{"jsonrpc": "2.0", "result": 22, "id": %d}]' % (id1,
+                                                                      id2),
                 content_type='application/json')
 
     def create_app(loop):
@@ -324,4 +324,3 @@ async def test_batch_requests(test_client):
                 two=server.dos.raw())
     assert x['one'] == 11
     assert x['two'] == 22
-
