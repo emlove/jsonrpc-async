@@ -64,16 +64,16 @@ class Server(jsonrpc_base.Server):
         try:
             response = await self._request(data=json.dumps(batch))
         except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
-            raise TransportError('Transport Error', "batch", exc)
+            raise TransportError('Transport Error', None, exc)
 
         if response.status != 200:
             raise TransportError('HTTP %d %s' % (response.status,
-                                                 response.reason), "batch")
+                                                 response.reason), None)
 
         try:
             response_data = await response.json(**self._json_args)
         except ValueError as value_error:
-            raise TransportError('Cannot deserialize response body', "batch",
+            raise TransportError('Cannot deserialize response body', None,
                                  value_error)
         r_data = {resp['id']: resp for resp in response_data}
         return {id_msg[_id]: kw[id_msg[_id]].parse_response(resp)

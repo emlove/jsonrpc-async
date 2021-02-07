@@ -321,3 +321,49 @@ async def test_batch_requests(test_client):
     x = await server.batch_message(one=server.uno.raw(), two=server.dos.raw())
     assert x['one'] == 11
     assert x['two'] == 22
+
+
+async def test_batch_timeout(test_client):
+    # catch timeout responses
+    async def handler(request):
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            # Event loop will be terminated before sleep finishes
+            pass
+        return aiohttp.web.Response(text='{}', content_type='application/json')
+
+    def create_app(loop):
+        app = aiohttp.web.Application(loop=loop)
+        app.router.add_route('POST', '/', handler)
+        return app
+
+    client = await test_client(create_app)
+    server = Server('/', client, timeout=0.2)
+
+    with pytest.raises(TransportError) as transport_error:
+        await server.batch_message(one=server.uno.raw(), two=server.dos.raw())
+
+    assert isinstance(transport_error.value.args[1], asyncio.TimeoutError)
+
+
+async def test_batch_cant_deserialize(test_client):
+    # catch non-json responses
+    async def handler1(request):
+        return aiohttp.web.Response(
+            text='not json', content_type='application/json')
+
+    def create_app(loop):
+        app = aiohttp.web.Application(loop=loop)
+        app.router.add_route('POST', '/', handler1)
+        return app
+
+    client = await test_client(create_app)
+    server = Server('/', client)
+
+    with pytest.raises(TransportError) as transport_error:
+        await server.batch_message(one=server.uno.raw(), two=server.dos.raw())
+
+    assert transport_error.value.args[0] == (
+        "Cannot deserialize response body")
+    assert isinstance(transport_error.value.args[1], ValueError)
