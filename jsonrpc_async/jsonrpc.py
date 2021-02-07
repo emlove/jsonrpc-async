@@ -44,8 +44,8 @@ class Server(jsonrpc_base.Server):
             raise TransportError(
                 'HTTP %d %s' % (response.status, response.reason), message)
 
-        if message.response_id is None:
-            # Message is notification, so no response is expcted.
+        if (not message.is_batch()) and message.response_id is None:
+            # Message is notification, so no response is expected.
             return None
 
         try:
@@ -57,27 +57,7 @@ class Server(jsonrpc_base.Server):
         return message.parse_response(response_data)
 
     async def batch_message(self, **kw):
-        # we assume no notifications in the batch
-        batch = [m.as_json_obj() for m in kw.values()]
-        id_msg = {m['id']: k for k, m in kw.items()}
-
-        try:
-            response = await self._request(data=json.dumps(batch))
-        except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
-            raise TransportError('Transport Error', None, exc)
-
-        if response.status != 200:
-            raise TransportError('HTTP %d %s' % (response.status,
-                                                 response.reason), None)
-
-        try:
-            response_data = await response.json(**self._json_args)
-        except ValueError as value_error:
-            raise TransportError('Cannot deserialize response body', None,
-                                 value_error)
-        r_data = {resp['id']: resp for resp in response_data}
-        return {id_msg[_id]: kw[id_msg[_id]].parse_response(resp)
-                for _id, resp in r_data.items()}
+        return await self.send_message(Batch(**kw))
 
     def __getattr__(self, method_name):
         return Method(self, self.__register, method_name)
@@ -143,3 +123,35 @@ class Request(BaseRequest):
     def serialize(self):
         """Generate the raw JSON message to be sent to the server"""
         return json.dumps(self.as_json_obj())
+
+    def is_batch(self):
+        return False
+
+
+class Batch:
+    def __init__(self, **kw):
+        # we assume no notifications in the batch
+        self.kw = kw
+        self.batch = [m.as_json_obj() for m in kw.values()]
+        self.id_msg = {m['id']: k for k, m in kw.items()}
+
+    def is_batch(self):
+        return True
+
+    def as_json_obj(self):
+        return self.batch[:]
+
+    def serialize(self):
+        """Generate the raw JSON message to be sent to the server"""
+        return json.dumps(self.as_json_obj())
+
+    def parse_response(self, response_data):
+        r_data = {resp['id']: resp for resp in response_data}
+        return {self.id_msg[_id]: self.kw[self.id_msg[_id]].parse_response(resp)
+                for _id, resp in r_data.items()}
+
+    @property
+    def transport_error_text(self):
+        """Exception text for a transport error."""
+        return 'Error calling with batch-request'
+

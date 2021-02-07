@@ -8,7 +8,7 @@ import aiohttp.web
 import aiohttp.test_utils
 
 from jsonrpc_async import Server, ProtocolError, TransportError
-from jsonrpc_async.jsonrpc import Request
+from jsonrpc_async.jsonrpc import Request, Batch
 
 
 async def test_send_message_timeout(test_client):
@@ -322,6 +322,11 @@ async def test_batch_requests(test_client):
     assert x['one'] == 11
     assert x['two'] == 22
 
+    y = await server.send_message(Batch(one=server.uno.raw(),
+                                        two=server.dos.raw()))
+    assert y['one'] == 11
+    assert y['two'] == 22
+
 
 async def test_batch_timeout(test_client):
     # catch timeout responses
@@ -365,7 +370,7 @@ async def test_batch_cant_deserialize(test_client):
         await server.batch_message(one=server.uno.raw(), two=server.dos.raw())
 
     assert transport_error.value.args[0] == (
-        "Cannot deserialize response body")
+        "Error calling with batch-request: Cannot deserialize response body")
     assert isinstance(transport_error.value.args[1], ValueError)
 
 
@@ -387,7 +392,7 @@ async def test_batch_non_200_responses(test_client):
         await server.batch_message(one=server.uno.raw())
 
     assert transport_error.value.args[0] == (
-        "HTTP 404 Not Found")
+        "Error calling with batch-request: HTTP 404 Not Found")
 
     # catch aiohttp own exception
     async def callback(*args, **kwargs):
@@ -402,7 +407,7 @@ async def test_batch_non_200_responses(test_client):
     server = Server('/', client)
 
     with pytest.raises(TransportError) as transport_error:
-        await server.batch_message(one=server.uno.raw())
+        await server.batch_message          (one=server.uno.raw())
 
     assert transport_error.value.args[0] == (
-        "Transport Error")
+        "Error calling with batch-request: Transport Error")
