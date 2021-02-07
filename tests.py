@@ -367,3 +367,42 @@ async def test_batch_cant_deserialize(test_client):
     assert transport_error.value.args[0] == (
         "Cannot deserialize response body")
     assert isinstance(transport_error.value.args[1], ValueError)
+
+
+async def test_batch_non_200_responses(test_client):
+    # catch non-200 responses
+    async def handler2(request):
+        return aiohttp.web.Response(
+            text='{}', content_type='application/json', status=404)
+
+    def create_app(loop):
+        app = aiohttp.web.Application(loop=loop)
+        app.router.add_route('POST', '/', handler2)
+        return app
+
+    client = await test_client(create_app)
+    server = Server('/', client)
+
+    with pytest.raises(TransportError) as transport_error:
+        await server.batch_message(one=server.uno.raw())
+
+    assert transport_error.value.args[0] == (
+        "HTTP 404 Not Found")
+
+    # catch aiohttp own exception
+    async def callback(*args, **kwargs):
+        raise aiohttp.ClientOSError('aiohttp exception')
+
+    def create_app(loop):
+        app = aiohttp.web.Application(loop=loop)
+        return app
+
+    client = await test_client(create_app)
+    client.post = callback
+    server = Server('/', client)
+
+    with pytest.raises(TransportError) as transport_error:
+        await server.batch_message(one=server.uno.raw())
+
+    assert transport_error.value.args[0] == (
+        "Transport Error")
