@@ -80,14 +80,13 @@ class Server(jsonrpc_base.Server):
                 for _id, resp in r_data.items()}
 
     def __getattr__(self, method_name):
-        if method_name.startswith("_"):  # prevent rpc-calls for private methods
-            raise AttributeError("invalid attribute '%s'" % method_name)
         return Method(self, self.__register, method_name)
 
 
 class Method(BaseMethod):
     """Map the methods called on the server to json-rpc methods."""
     def __init__(self, server, register_method, method_name):
+        self.__check_method_name(method_name)
         self._server = server
         self.__register_method = register_method
         self.__method_name = method_name
@@ -95,9 +94,13 @@ class Method(BaseMethod):
     def __call__(self, *args, **kwargs):
         return self._server.send_message(self.raw(*args, **kwargs))
 
-    def __getattr__(self, method_name):
-        if method_name.startswith("_"):  # prevent rpc-calls for private methods
+    def __check_method_name(self, method_name):
+        # prevent rpc-calls for private methods
+        if method_name.startswith("_"):
             raise AttributeError("invalid attribute '%s'" % method_name)
+
+    def __getattr__(self, method_name):
+        self.__check_method_name(method_name)
         return Method(self._server, self.__register_method,
                       "%s.%s" % (self.__method_name, method_name))
 
