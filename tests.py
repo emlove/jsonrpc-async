@@ -407,7 +407,7 @@ async def test_batch_non_200_responses(test_client):
     server = Server('/', client)
 
     with pytest.raises(TransportError) as transport_error:
-        await server.batch_message          (one=server.uno.raw())
+        await server.batch_message(one=server.uno.raw())
 
     assert transport_error.value.args[0] == (
         "Error calling with batch-request: Transport Error")
