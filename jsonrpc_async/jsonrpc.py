@@ -148,8 +148,8 @@ class Batch:
     def parse_response(self, response_data):
         r_data = {resp['id']: resp for resp in response_data}
         return {self.id_msg[_id]:
-                    self.kw[self.id_msg[_id]].parse_response(resp)
-                    for _id, resp in r_data.items()}
+                self.kw[self.id_msg[_id]].parse_response(resp)
+                for _id, resp in r_data.items()}
 
     @property
     def transport_error_text(self):
