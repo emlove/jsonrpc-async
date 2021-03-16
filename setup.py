@@ -19,7 +19,7 @@ setup(
     description='''A JSON-RPC client library for asyncio''',
     long_description=open('README.rst').read(),
     install_requires=[
-        'jsonrpc-base==1.0.3',
+        'jsonrpc-base>=2.0.0',
         'aiohttp>=3.0.0',
     ],
     classifiers=[
