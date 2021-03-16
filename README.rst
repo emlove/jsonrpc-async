@@ -101,20 +101,26 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Changelog
 ---------
-1.1.1 (November 12, 2019)
-~~~~~~~~~~~~~~~~~~~~~~~~~
+2.0.0 (2021-03-16)
+~~~~~~~~~~~~~~~~~~
+- Bumped jsonrpc-base to version 2.0.0
+- BREAKING CHANGE: `Allow single mapping as a positional parameter. <https://github.com/emlove/jsonrpc-base/pull/6>`_
+  Previously, when calling with a single dict as a parameter (example: ``server.foo({'bar': 0})``), the mapping was used as the JSON-RPC keyword parameters. This made it impossible to send a mapping as the first and only positional parameter. If you depended on the old behavior, you can recreate it by spreading the mapping as your method's kwargs. (example: ``server.foo(**{'bar': 0})``)
+
+1.1.1 (2019-11-12)
+~~~~~~~~~~~~~~~~~~
 - Bumped jsonrpc-base to version 1.0.3
 
-1.1.0 (September 4, 2018)
-~~~~~~~~~~~~~~~~~~~~~~~~~
+1.1.0 (2018-09-04)
+~~~~~~~~~~~~~~~~~~
 - Added support for using a custom json.loads method `(#1) <https://github.com/emlove/jsonrpc-async/pull/1>`_ `@tdivis <https://github.com/tdivis>`_
 
-1.0.1 (August 23, 2018)
-~~~~~~~~~~~~~~~~~~~~~~~
+1.0.1 (2018-08-23)
+~~~~~~~~~~~~~~~~~~
 - Bumped jsonrpc-base to version 1.0.2
 
-1.0.0 (July 6, 2018)
-~~~~~~~~~~~~~~~~~~~~
+1.0.0 (2018-07-06)
+~~~~~~~~~~~~~~~~~~
 - Bumped minimum aiohttp version to 3.0.0
 - Bumped jsonrpc-base to version 1.0.1
 

@@ -9,7 +9,7 @@ except ImportError:
 
 setup(
     name='jsonrpc-async',
-    version='1.1.1',
+    version='2.0.0',
     author='Emily Mills',
     author_email='emily@emlove.me',
     packages=('jsonrpc_async',),
