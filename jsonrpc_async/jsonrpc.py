@@ -49,7 +49,7 @@ class Server(jsonrpc_base.Server):
             return None
 
         try:
-            response_data = await response.json(**self._json_args)
+            response_data = await response.json(**self._json_args, content_type='')
         except ValueError as value_error:
             raise TransportError(
                 'Cannot deserialize response body', message, value_error)

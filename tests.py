@@ -411,3 +411,18 @@ async def test_batch_non_200_responses(test_client):
 
     assert transport_error.value.args[0] == (
         "Error calling with batch-request: Transport Error")
+
+async def test_no_json_header(test_client):
+    async def handler(request):
+        return aiohttp.web.Response(
+            text='{"jsonrpc": "2.0", "result": "31", "id": 1}')
+
+    def create_app(loop):
+        app = aiohttp.web.Application(loop=loop)
+        app.router.add_route('POST', '/', handler)
+        return app
+    client = await test_client(create_app)
+    server = Server('/', client)
+    result = await server.send_message(
+        jsonrpc_base.Request('net_version', params=[], msg_id=1))
+    assert result=='31'
