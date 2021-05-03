@@ -101,6 +101,10 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Changelog
 ---------
+2.1.0 (2021-05-03)
+~~~~~~~~~~~~~~~~~~
+- Bumped jsonrpc-base to version 2.1.0
+
 2.0.0 (2021-03-16)
 ~~~~~~~~~~~~~~~~~~
 - Bumped jsonrpc-base to version 2.0.0
