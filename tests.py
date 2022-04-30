@@ -12,7 +12,8 @@ from jsonrpc_async import Server, ProtocolError, TransportError
 
 
 async def test_send_message_timeout(aiohttp_client):
-    # catch timeout responses
+    """Test the catching of the timeout responses."""
+
     async def handler(request):
         try:
             await asyncio.sleep(10)
@@ -37,6 +38,7 @@ async def test_send_message_timeout(aiohttp_client):
 
 
 async def test_send_message(aiohttp_client):
+    """Test the sending of messages."""
     # catch non-json responses
     async def handler1(request):
         return aiohttp.web.Response(
@@ -119,7 +121,7 @@ async def test_exception_passthrough(aiohttp_client):
 
 
 async def test_forbid_private_methods(aiohttp_client):
-    """Test that we can't call private methods (those starting with '_')"""
+    """Test that we can't call private methods (those starting with '_')."""
     def create_app():
         app = aiohttp.web.Application()
         return app
@@ -136,7 +138,7 @@ async def test_forbid_private_methods(aiohttp_client):
 
 
 async def test_headers_passthrough(aiohttp_client):
-    """Test that we correctly send RFC headers and merge them with users"""
+    """Test that we correctly send RFC headers and merge them with users."""
     async def handler(request):
         return aiohttp.web.Response(
             text='{"jsonrpc": "2.0", "result": true, "id": 1}',
@@ -169,7 +171,7 @@ async def test_headers_passthrough(aiohttp_client):
 
 
 async def test_method_call(aiohttp_client):
-    """mixing *args and **kwargs is forbidden by the spec"""
+    """Mixing *args and **kwargs is forbidden by the spec."""
     def create_app():
         app = aiohttp.web.Application()
         return app
@@ -184,7 +186,7 @@ async def test_method_call(aiohttp_client):
 
 
 async def test_method_nesting(aiohttp_client):
-    """Test that we correctly nest namespaces"""
+    """Test that we correctly nest namespaces."""
     async def handler(request):
         request_message = await request.json()
         if (request_message["params"][0] == request_message["method"]):
@@ -210,7 +212,7 @@ async def test_method_nesting(aiohttp_client):
 
 
 async def test_calls(aiohttp_client):
-    # rpc call with positional parameters:
+    """Test RPC call with positional parameters."""
     async def handler1(request):
         request_message = await request.json()
         assert request_message["params"] == [42, 23]
@@ -264,7 +266,7 @@ async def test_calls(aiohttp_client):
 
 
 async def test_notification(aiohttp_client):
-    # Verify that we ignore the server response
+    """Verify that we ignore the server response."""
     async def handler(request):
         return aiohttp.web.Response(
             text='{"jsonrpc": "2.0", "result": 19, "id": 1}',
@@ -282,7 +284,7 @@ async def test_notification(aiohttp_client):
 
 
 async def test_custom_loads(aiohttp_client):
-    # rpc call with positional parameters:
+    """Test RPC call with custom load."""
     loads_mock = mock.Mock(wraps=json.loads)
 
     async def handler(request):
