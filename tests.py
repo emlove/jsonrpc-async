@@ -11,8 +11,9 @@ import jsonrpc_base
 from jsonrpc_async import Server, ProtocolError, TransportError
 
 
-async def test_send_message_timeout(test_client):
-    # catch timeout responses
+async def test_send_message_timeout(aiohttp_client):
+    """Test the catching of the timeout responses."""
+
     async def handler(request):
         try:
             await asyncio.sleep(10)
@@ -21,12 +22,12 @@ async def test_send_message_timeout(test_client):
             pass
         return aiohttp.web.Response(text='{}', content_type='application/json')
 
-    def create_app(loop):
-        app = aiohttp.web.Application(loop=loop)
+    def create_app():
+        app = aiohttp.web.Application()
         app.router.add_route('POST', '/', handler)
         return app
 
-    client = await test_client(create_app)
+    client = await aiohttp_client(create_app())
     server = Server('/', client, timeout=0.2)
 
     with pytest.raises(TransportError) as transport_error:
@@ -36,18 +37,19 @@ async def test_send_message_timeout(test_client):
     assert isinstance(transport_error.value.args[1], asyncio.TimeoutError)
 
 
-async def test_send_message(test_client):
+async def test_send_message(aiohttp_client):
+    """Test the sending of messages."""
     # catch non-json responses
     async def handler1(request):
         return aiohttp.web.Response(
             text='not json', content_type='application/json')
 
-    def create_app(loop):
-        app = aiohttp.web.Application(loop=loop)
+    def create_app():
+        app = aiohttp.web.Application()
         app.router.add_route('POST', '/', handler1)
         return app
 
-    client = await test_client(create_app)
+    client = await aiohttp_client(create_app())
     server = Server('/', client)
 
     with pytest.raises(TransportError) as transport_error:
@@ -63,12 +65,12 @@ async def test_send_message(test_client):
         return aiohttp.web.Response(
             text='{}', content_type='application/json', status=404)
 
-    def create_app(loop):
-        app = aiohttp.web.Application(loop=loop)
+    def create_app():
+        app = aiohttp.web.Application()
         app.router.add_route('POST', '/', handler2)
         return app
 
-    client = await test_client(create_app)
+    client = await aiohttp_client(create_app())
     server = Server('/', client)
 
     with pytest.raises(TransportError) as transport_error:
@@ -82,11 +84,11 @@ async def test_send_message(test_client):
     async def callback(*args, **kwargs):
         raise aiohttp.ClientOSError('aiohttp exception')
 
-    def create_app(loop):
-        app = aiohttp.web.Application(loop=loop)
+    def create_app():
+        app = aiohttp.web.Application()
         return app
 
-    client = await test_client(create_app)
+    client = await aiohttp_client(create_app())
     client.post = callback
     server = Server('/', client)
 
@@ -98,15 +100,15 @@ async def test_send_message(test_client):
         "Error calling method 'my_method': Transport Error")
 
 
-async def test_exception_passthrough(test_client):
+async def test_exception_passthrough(aiohttp_client):
     async def callback(*args, **kwargs):
         raise aiohttp.ClientOSError('aiohttp exception')
 
-    def create_app(loop):
-        app = aiohttp.web.Application(loop=loop)
+    def create_app():
+        app = aiohttp.web.Application()
         return app
 
-    client = await test_client(create_app)
+    client = await aiohttp_client(create_app())
     client.post = callback
     server = Server('/', client)
 
@@ -118,13 +120,13 @@ async def test_exception_passthrough(test_client):
     assert isinstance(transport_error.value.args[1], aiohttp.ClientOSError)
 
 
-async def test_forbid_private_methods(test_client):
-    """Test that we can't call private methods (those starting with '_')"""
-    def create_app(loop):
-        app = aiohttp.web.Application(loop=loop)
+async def test_forbid_private_methods(aiohttp_client):
+    """Test that we can't call private methods (those starting with '_')."""
+    def create_app():
+        app = aiohttp.web.Application()
         return app
 
-    client = await test_client(create_app)
+    client = await aiohttp_client(create_app())
     server = Server('/', client)
 
     with pytest.raises(AttributeError):
@@ -135,19 +137,19 @@ async def test_forbid_private_methods(test_client):
         await server.foo.bar._baz()
 
 
-async def test_headers_passthrough(test_client):
-    """Test that we correctly send RFC headers and merge them with users"""
+async def test_headers_passthrough(aiohttp_client):
+    """Test that we correctly send RFC headers and merge them with users."""
     async def handler(request):
         return aiohttp.web.Response(
             text='{"jsonrpc": "2.0", "result": true, "id": 1}',
             content_type='application/json')
 
-    def create_app(loop):
-        app = aiohttp.web.Application(loop=loop)
+    def create_app():
+        app = aiohttp.web.Application()
         app.router.add_route('POST', '/', handler)
         return app
 
-    client = await test_client(create_app)
+    client = await aiohttp_client(create_app())
 
     original_post = client.post
 
@@ -168,13 +170,13 @@ async def test_headers_passthrough(test_client):
     await server.foo()
 
 
-async def test_method_call(test_client):
-    """mixing *args and **kwargs is forbidden by the spec"""
-    def create_app(loop):
-        app = aiohttp.web.Application(loop=loop)
+async def test_method_call(aiohttp_client):
+    """Mixing *args and **kwargs is forbidden by the spec."""
+    def create_app():
+        app = aiohttp.web.Application()
         return app
 
-    client = await test_client(create_app)
+    client = await aiohttp_client(create_app())
     server = Server('/', client)
 
     with pytest.raises(ProtocolError) as error:
@@ -183,8 +185,8 @@ async def test_method_call(test_client):
         "JSON-RPC spec forbids mixing arguments and keyword arguments")
 
 
-async def test_method_nesting(test_client):
-    """Test that we correctly nest namespaces"""
+async def test_method_nesting(aiohttp_client):
+    """Test that we correctly nest namespaces."""
     async def handler(request):
         request_message = await request.json()
         if (request_message["params"][0] == request_message["method"]):
@@ -196,12 +198,12 @@ async def test_method_nesting(test_client):
                 text='{"jsonrpc": "2.0", "result": false, "id": 1}',
                 content_type='application/json')
 
-    def create_app(loop):
-        app = aiohttp.web.Application(loop=loop)
+    def create_app():
+        app = aiohttp.web.Application()
         app.router.add_route('POST', '/', handler)
         return app
 
-    client = await test_client(create_app)
+    client = await aiohttp_client(create_app())
     server = Server('/', client)
 
     assert await server.nest.testmethod("nest.testmethod") is True
@@ -209,8 +211,8 @@ async def test_method_nesting(test_client):
         "nest.testmethod.some.other.method") is True
 
 
-async def test_calls(test_client):
-    # rpc call with positional parameters:
+async def test_calls(aiohttp_client):
+    """Test RPC call with positional parameters."""
     async def handler1(request):
         request_message = await request.json()
         assert request_message["params"] == [42, 23]
@@ -218,12 +220,12 @@ async def test_calls(test_client):
             text='{"jsonrpc": "2.0", "result": 19, "id": 1}',
             content_type='application/json')
 
-    def create_app(loop):
-        app = aiohttp.web.Application(loop=loop)
+    def create_app():
+        app = aiohttp.web.Application()
         app.router.add_route('POST', '/', handler1)
         return app
 
-    client = await test_client(create_app)
+    client = await aiohttp_client(create_app())
     server = Server('/', client)
 
     assert await server.subtract(42, 23) == 19
@@ -235,12 +237,12 @@ async def test_calls(test_client):
             text='{"jsonrpc": "2.0", "result": 19, "id": 1}',
             content_type='application/json')
 
-    def create_app(loop):
-        app = aiohttp.web.Application(loop=loop)
+    def create_app():
+        app = aiohttp.web.Application()
         app.router.add_route('POST', '/', handler2)
         return app
 
-    client = await test_client(create_app)
+    client = await aiohttp_client(create_app())
     server = Server('/', client)
 
     assert await server.subtract(x=42, y=23) == 19
@@ -252,37 +254,37 @@ async def test_calls(test_client):
             text='{"jsonrpc": "2.0", "result": null}',
             content_type='application/json')
 
-    def create_app(loop):
-        app = aiohttp.web.Application(loop=loop)
+    def create_app():
+        app = aiohttp.web.Application()
         app.router.add_route('POST', '/', handler3)
         return app
 
-    client = await test_client(create_app)
+    client = await aiohttp_client(create_app())
     server = Server('/', client)
 
     await server.foobar({'foo': 'bar'})
 
 
-async def test_notification(test_client):
-    # Verify that we ignore the server response
+async def test_notification(aiohttp_client):
+    """Verify that we ignore the server response."""
     async def handler(request):
         return aiohttp.web.Response(
             text='{"jsonrpc": "2.0", "result": 19, "id": 1}',
             content_type='application/json')
 
-    def create_app(loop):
-        app = aiohttp.web.Application(loop=loop)
+    def create_app():
+        app = aiohttp.web.Application()
         app.router.add_route('POST', '/', handler)
         return app
 
-    client = await test_client(create_app)
+    client = await aiohttp_client(create_app())
     server = Server('/', client)
 
     assert await server.subtract(42, 23, _notification=True) is None
 
 
-async def test_custom_loads(test_client):
-    # rpc call with positional parameters:
+async def test_custom_loads(aiohttp_client):
+    """Test RPC call with custom load."""
     loads_mock = mock.Mock(wraps=json.loads)
 
     async def handler(request):
@@ -292,12 +294,12 @@ async def test_custom_loads(test_client):
             text='{"jsonrpc": "2.0", "result": 19, "id": 1}',
             content_type='application/json')
 
-    def create_app(loop):
-        app = aiohttp.web.Application(loop=loop)
+    def create_app():
+        app = aiohttp.web.Application()
         app.router.add_route('POST', '/', handler)
         return app
 
-    client = await test_client(create_app)
+    client = await aiohttp_client(create_app())
     server = Server('/', client, loads=loads_mock)
 
     assert await server.subtract(42, 23) == 19
