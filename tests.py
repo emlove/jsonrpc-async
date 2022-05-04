@@ -7,8 +7,8 @@ import aiohttp
 import aiohttp.web
 import aiohttp.test_utils
 
-import jsonrpc_base
 from jsonrpc_async import Server, ProtocolError, TransportError
+from jsonrpc_async.jsonrpc import Request, Batch
 
 
 async def test_send_message_timeout(aiohttp_client):
@@ -31,7 +31,7 @@ async def test_send_message_timeout(aiohttp_client):
     server = Server('/', client, timeout=0.2)
 
     with pytest.raises(TransportError) as transport_error:
-        await server.send_message(jsonrpc_base.Request(
+        await server.send_message(Request(
             'my_method', params=None, msg_id=1))
 
     assert isinstance(transport_error.value.args[1], asyncio.TimeoutError)
@@ -53,8 +53,7 @@ async def test_send_message(aiohttp_client):
     server = Server('/', client)
 
     with pytest.raises(TransportError) as transport_error:
-        await server.send_message(
-            jsonrpc_base.Request('my_method', params=None, msg_id=1))
+        await server.send_message(Request('my_method', params=None, msg_id=1))
 
     assert transport_error.value.args[0] == (
         "Error calling method 'my_method': Cannot deserialize response body")
@@ -74,8 +73,7 @@ async def test_send_message(aiohttp_client):
     server = Server('/', client)
 
     with pytest.raises(TransportError) as transport_error:
-        await server.send_message(jsonrpc_base.Request(
-            'my_method', params=None, msg_id=1))
+        await server.send_message(Request('my_method', params=None, msg_id=1))
 
     assert transport_error.value.args[0] == (
         "Error calling method 'my_method': HTTP 404 Not Found")
@@ -93,8 +91,7 @@ async def test_send_message(aiohttp_client):
     server = Server('/', client)
 
     with pytest.raises(TransportError) as transport_error:
-        await server.send_message(jsonrpc_base.Request(
-            'my_method', params=None, msg_id=1))
+        await server.send_message(Request('my_method', params=None, msg_id=1))
 
     assert transport_error.value.args[0] == (
         "Error calling method 'my_method': Transport Error")
@@ -304,3 +301,130 @@ async def test_custom_loads(aiohttp_client):
 
     assert await server.subtract(42, 23) == 19
     assert loads_mock.call_count == 1
+
+
+async def test_batch_requests(test_client):
+    async def batch_handler(request):
+        request_message = await request.json()
+        id1 = request_message[0]['id']
+        id2 = request_message[1]['id']
+        return aiohttp.web.Response(text='[{"jsonrpc": "2.0", "result": 11, '
+                                         '"id": %d},{"jsonrpc": "2.0", "result'
+                                         '": 22, "id": %d}]' % (id1, id2),
+                                    content_type='application/json')
+
+    def create_app(loop):
+        app = aiohttp.web.Application(loop=loop)
+        app.router.add_route('POST', '/', batch_handler)
+        return app
+
+    client = await test_client(create_app)
+    server = Server('/', client)
+    x = await server.batch_message(one=server.uno.raw(), two=server.dos.raw())
+    assert x['one'] == 11
+    assert x['two'] == 22
+
+    y = await server.send_message(Batch(one=server.uno.raw(),
+                                        two=server.dos.raw()))
+    assert y['one'] == 11
+    assert y['two'] == 22
+
+
+async def test_batch_timeout(test_client):
+    # catch timeout responses
+    async def handler(request):
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            # Event loop will be terminated before sleep finishes
+            pass
+        return aiohttp.web.Response(text='{}', content_type='application/json')
+
+    def create_app(loop):
+        app = aiohttp.web.Application(loop=loop)
+        app.router.add_route('POST', '/', handler)
+        return app
+
+    client = await test_client(create_app)
+    server = Server('/', client, timeout=0.2)
+
+    with pytest.raises(TransportError) as transport_error:
+        await server.batch_message(one=server.uno.raw(), two=server.dos.raw())
+
+    assert isinstance(transport_error.value.args[1], asyncio.TimeoutError)
+
+
+async def test_batch_cant_deserialize(test_client):
+    # catch non-json responses
+    async def handler1(request):
+        return aiohttp.web.Response(
+            text='not json', content_type='application/json')
+
+    def create_app(loop):
+        app = aiohttp.web.Application(loop=loop)
+        app.router.add_route('POST', '/', handler1)
+        return app
+
+    client = await test_client(create_app)
+    server = Server('/', client)
+
+    with pytest.raises(TransportError) as transport_error:
+        await server.batch_message(one=server.uno.raw(), two=server.dos.raw())
+
+    assert transport_error.value.args[0] == (
+        "Error calling with batch-request: Cannot deserialize response body")
+    assert isinstance(transport_error.value.args[1], ValueError)
+
+
+async def test_batch_non_200_responses(test_client):
+    # catch non-200 responses
+    async def handler2(request):
+        return aiohttp.web.Response(
+            text='{}', content_type='application/json', status=404)
+
+    def create_app(loop):
+        app = aiohttp.web.Application(loop=loop)
+        app.router.add_route('POST', '/', handler2)
+        return app
+
+    client = await test_client(create_app)
+    server = Server('/', client)
+
+    with pytest.raises(TransportError) as transport_error:
+        await server.batch_message(one=server.uno.raw())
+
+    assert transport_error.value.args[0] == (
+        "Error calling with batch-request: HTTP 404 Not Found")
+
+    # catch aiohttp own exception
+    async def callback(*args, **kwargs):
+        raise aiohttp.ClientOSError('aiohttp exception')
+
+    def create_app(loop):
+        app = aiohttp.web.Application(loop=loop)
+        return app
+
+    client = await test_client(create_app)
+    client.post = callback
+    server = Server('/', client)
+
+    with pytest.raises(TransportError) as transport_error:
+        await server.batch_message(one=server.uno.raw())
+
+    assert transport_error.value.args[0] == (
+        "Error calling with batch-request: Transport Error")
+
+async def test_no_json_header(test_client):
+    async def handler(request):
+        return aiohttp.web.Response(
+            text='{"jsonrpc": "2.0", "result": "31", "id": 1}')
+
+    def create_app(loop):
+        app = aiohttp.web.Application(loop=loop)
+        app.router.add_route('POST', '/', handler)
+        return app
+    client = await test_client(create_app)
+    server = Server('/', client)
+    result = await server.send_message(
+        jsonrpc_base.Request('net_version', params=[], msg_id=1))
+    assert result=='31'
