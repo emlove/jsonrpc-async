@@ -49,3 +49,10 @@ class Server(jsonrpc_base.Server):
                 'Cannot deserialize response body', message, value_error)
 
         return message.parse_response(response_data)
+
+    async def __aenter__(self):
+        await self.session.__aenter__()
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return await self.session.__aexit__(exc_type, exc, tb)
