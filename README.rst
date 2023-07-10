@@ -28,14 +28,11 @@ Execute remote JSON-RPC functions
     from jsonrpc_async import Server
 
     async def routine():
-        server = Server('http://localhost:8080')
-        try:
+        async with Server('http://localhost:8080') as server:
             await server.foo(1, 2)
             await server.foo(bar=1, baz=2)
             await server.foo({'foo': 'bar'})
             await server.foo.bar(baz=1, qux=2)
-        finally:
-            await server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
 
@@ -47,11 +44,8 @@ A notification
     from jsonrpc_async import Server
 
     async def routine():
-        server = Server('http://localhost:8080')
-        try:
+        async with Server('http://localhost:8080') as server:
             await server.foo(bar=1, _notification=True)
-        finally:
-            await server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
 
@@ -64,14 +58,12 @@ Pass through arguments to aiohttp (see also `aiohttp  documentation <http://aioh
     from jsonrpc_async import Server
 
     async def routine():
-        server = Server(
+        async with Server(
             'http://localhost:8080',
             auth=aiohttp.BasicAuth('user', 'pass'),
-            headers={'x-test2': 'true'})
-        try:
+            headers={'x-test2': 'true'}
+        ) as server:
             await server.foo()
-        finally:
-            await server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
 
@@ -84,13 +76,11 @@ Pass through aiohttp exceptions
     from jsonrpc_async import Server
 
     async def routine():
-        server = Server('http://unknown-host')
-        try:
-            await server.foo()
-        except TransportError as transport_error:
-            print(transport_error.args[1]) # this will hold a aiohttp exception instance
-        finally:
-            await server.session.close()
+        async with Server('http://unknown-host') as server:
+            try:
+                await server.foo()
+            except TransportError as transport_error:
+                print(transport_error.args[1]) # this will hold a aiohttp exception instance
 
     asyncio.get_event_loop().run_until_complete(routine())
 

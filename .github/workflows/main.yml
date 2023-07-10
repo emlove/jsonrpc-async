@@ -31,7 +31,7 @@ jobs:
         flake8 jsonrpc_async tests.py
     - name: Test with pytest
       run: |
-        pytest --cov-report term-missing --cov=jsonrpc_async tests.py
+        pytest --cov-report term-missing --cov=jsonrpc_async --asyncio-mode=auto tests.py
     - name: Coveralls
       uses: AndreMiras/coveralls-python-action@develop
       with:

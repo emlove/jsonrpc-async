@@ -304,3 +304,21 @@ async def test_custom_loads(aiohttp_client):
 
     assert await server.subtract(42, 23) == 19
     assert loads_mock.call_count == 1
+
+
+async def test_context_manager(aiohttp_client):
+    # catch non-json responses
+    async def handler1(request):
+        return aiohttp.web.Response(
+            text='not json', content_type='application/json')
+
+    def create_app():
+        app = aiohttp.web.Application()
+        app.router.add_route('POST', '/', handler1)
+        return app
+
+    client = await aiohttp_client(create_app())
+    async with Server('/', client) as server:
+        assert isinstance(server, Server)
+        assert not server.session.session.closed
+    assert server.session.session.closed
