@@ -90,6 +90,14 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Changelog
 ---------
+2.1.2 (2023-07-10)
+~~~~~~~~~~~~~~~~~~
+- Add support for `async with` `(#10) <https://github.com/emlove/jsonrpc-async/pull/10>`_ `@lieryan <https://github.com/lieryan>`_
+
+2.1.1 (2022-05-03)
+~~~~~~~~~~~~~~~~~~
+- Unpin test dependencies
+
 2.1.0 (2021-05-03)
 ~~~~~~~~~~~~~~~~~~
 - Bumped jsonrpc-base to version 2.1.0
