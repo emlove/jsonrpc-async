@@ -11,6 +11,7 @@ import jsonrpc_base
 from jsonrpc_async import Server, ProtocolError, TransportError
 
 
+@pytest.mark.asyncio
 async def test_send_message_timeout(aiohttp_client):
     """Test the catching of the timeout responses."""
 
@@ -37,6 +38,7 @@ async def test_send_message_timeout(aiohttp_client):
     assert isinstance(transport_error.value.args[1], asyncio.TimeoutError)
 
 
+@pytest.mark.asyncio
 async def test_send_message(aiohttp_client):
     """Test the sending of messages."""
     # catch non-json responses
@@ -100,6 +102,7 @@ async def test_send_message(aiohttp_client):
         "Error calling method 'my_method': Transport Error")
 
 
+@pytest.mark.asyncio
 async def test_exception_passthrough(aiohttp_client):
     async def callback(*args, **kwargs):
         raise aiohttp.ClientOSError('aiohttp exception')
@@ -120,6 +123,7 @@ async def test_exception_passthrough(aiohttp_client):
     assert isinstance(transport_error.value.args[1], aiohttp.ClientOSError)
 
 
+@pytest.mark.asyncio
 async def test_forbid_private_methods(aiohttp_client):
     """Test that we can't call private methods (those starting with '_')."""
     def create_app():
@@ -137,6 +141,7 @@ async def test_forbid_private_methods(aiohttp_client):
         await server.foo.bar._baz()
 
 
+@pytest.mark.asyncio
 async def test_headers_passthrough(aiohttp_client):
     """Test that we correctly send RFC headers and merge them with users."""
     async def handler(request):
@@ -170,6 +175,7 @@ async def test_headers_passthrough(aiohttp_client):
     await server.foo()
 
 
+@pytest.mark.asyncio
 async def test_method_call(aiohttp_client):
     """Mixing *args and **kwargs is forbidden by the spec."""
     def create_app():
@@ -185,6 +191,7 @@ async def test_method_call(aiohttp_client):
         "JSON-RPC spec forbids mixing arguments and keyword arguments")
 
 
+@pytest.mark.asyncio
 async def test_method_nesting(aiohttp_client):
     """Test that we correctly nest namespaces."""
     async def handler(request):
@@ -211,6 +218,7 @@ async def test_method_nesting(aiohttp_client):
         "nest.testmethod.some.other.method") is True
 
 
+@pytest.mark.asyncio
 async def test_calls(aiohttp_client):
     """Test RPC call with positional parameters."""
     async def handler1(request):
@@ -265,6 +273,7 @@ async def test_calls(aiohttp_client):
     await server.foobar({'foo': 'bar'})
 
 
+@pytest.mark.asyncio
 async def test_notification(aiohttp_client):
     """Verify that we ignore the server response."""
     async def handler(request):
@@ -283,6 +292,7 @@ async def test_notification(aiohttp_client):
     assert await server.subtract(42, 23, _notification=True) is None
 
 
+@pytest.mark.asyncio
 async def test_custom_loads(aiohttp_client):
     """Test RPC call with custom load."""
     loads_mock = mock.Mock(wraps=json.loads)
@@ -306,6 +316,7 @@ async def test_custom_loads(aiohttp_client):
     assert loads_mock.call_count == 1
 
 
+@pytest.mark.asyncio
 async def test_context_manager(aiohttp_client):
     # catch non-json responses
     async def handler1(request):
