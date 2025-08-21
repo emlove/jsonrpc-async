@@ -9,8 +9,8 @@ except ImportError:
 
 setup(
     name='jsonrpc-async',
-    version='2.1.2',
-    author='Emily Mills',
+    version='2.1.3',
+    author='Emily Love Watson',
     author_email='emily@emlove.me',
     packages=('jsonrpc_async',),
     license='BSD',
