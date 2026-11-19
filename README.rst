@@ -90,6 +90,10 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Changelog
 ---------
+2.2.0 (2026-11-19)
+~~~~~~~~~~~~~~~~~~
+- Wrap errors of reading the reply in TransportError `(#12) <https://github.com/emlove/jsonrpc-async/pull/12>`_ `@olympia <https://github.com/olympia>`_
+
 2.1.3 (2025-08-21)
 ~~~~~~~~~~~~~~~~~~
 - Fix tests with pytest 8.4 `(#11) <https://github.com/emlove/jsonrpc-async/pull/11>`_ `@mweinelt <https://github.com/mweinelt>`_
