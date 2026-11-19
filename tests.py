@@ -124,6 +124,153 @@ async def test_exception_passthrough(aiohttp_client):
 
 
 @pytest.mark.asyncio
+async def test_send_message_wrong_content_type(aiohttp_client):
+    """Test the catching of a reply with a non-JSON content type."""
+    async def handler(request):
+        return aiohttp.web.Response(
+            text='<html></html>', content_type='text/html')
+
+    def create_app():
+        app = aiohttp.web.Application()
+        app.router.add_route('POST', '/', handler)
+        return app
+
+    client = await aiohttp_client(create_app())
+    server = Server('/', client)
+
+    with pytest.raises(TransportError) as transport_error:
+        await server.send_message(jsonrpc_base.Request(
+            'my_method', params=None, msg_id=1))
+
+    assert transport_error.value.args[0] == (
+        "Error calling method 'my_method': Cannot deserialize response body")
+    assert isinstance(
+        transport_error.value.args[1], aiohttp.ContentTypeError)
+
+
+@pytest.mark.asyncio
+async def test_send_message_cut_off_body(aiohttp_client):
+    """Test the catching of a body that ends before its Content-Length."""
+    async def handler(request):
+        response = aiohttp.web.StreamResponse()
+        response.content_type = 'application/json'
+        response.content_length = 100
+        await response.prepare(request)
+        await response.write(b'{')
+        request.transport.close()
+        return response
+
+    def create_app():
+        app = aiohttp.web.Application()
+        app.router.add_route('POST', '/', handler)
+        return app
+
+    client = await aiohttp_client(create_app())
+    server = Server('/', client, timeout=5)
+
+    with pytest.raises(TransportError) as transport_error:
+        await server.send_message(jsonrpc_base.Request(
+            'my_method', params=None, msg_id=1))
+
+    assert transport_error.value.args[0] == (
+        "Error calling method 'my_method': Transport Error")
+    assert isinstance(
+        transport_error.value.args[1], aiohttp.ClientPayloadError)
+
+
+@pytest.mark.asyncio
+async def test_send_message_body_timeout(aiohttp_client):
+    """Test the catching of a timeout while the body is read."""
+    async def handler(request):
+        response = aiohttp.web.StreamResponse()
+        response.content_type = 'application/json'
+        response.content_length = 100
+        await response.prepare(request)
+        await response.write(b'{')
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            # Event loop will be terminated before sleep finishes
+            pass
+        return response
+
+    def create_app():
+        app = aiohttp.web.Application()
+        app.router.add_route('POST', '/', handler)
+        return app
+
+    client = await aiohttp_client(create_app())
+
+    original_post = client.post
+    headers_received = asyncio.Event()
+
+    async def callback(*args, **kwargs):
+        response = await original_post(*args, **kwargs)
+        headers_received.set()
+        return response
+
+    client.post = callback
+
+    server = Server('/', client, timeout=0.2)
+
+    with pytest.raises(TransportError) as transport_error:
+        await server.send_message(jsonrpc_base.Request(
+            'my_method', params=None, msg_id=1))
+
+    assert headers_received.is_set()
+    assert transport_error.value.args[0] == (
+        "Error calling method 'my_method': Transport Error")
+    assert isinstance(transport_error.value.args[1], asyncio.TimeoutError)
+
+
+@pytest.mark.asyncio
+async def test_send_message_cancelled_while_reading_body(aiohttp_client):
+    """Test that cancelling while the body is read is not wrapped."""
+    async def handler(request):
+        response = aiohttp.web.StreamResponse()
+        response.content_type = 'application/json'
+        response.content_length = 100
+        await response.prepare(request)
+        await response.write(b'{')
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            # Event loop will be terminated before sleep finishes
+            pass
+        return response
+
+    def create_app():
+        app = aiohttp.web.Application()
+        app.router.add_route('POST', '/', handler)
+        return app
+
+    client = await aiohttp_client(create_app())
+
+    original_post = client.post
+    headers_received = asyncio.Event()
+
+    async def callback(*args, **kwargs):
+        response = await original_post(*args, **kwargs)
+        headers_received.set()
+        return response
+
+    client.post = callback
+
+    server = Server('/', client, timeout=5)
+
+    task = asyncio.create_task(server.send_message(jsonrpc_base.Request(
+        'my_method', params=None, msg_id=1)))
+    try:
+        await asyncio.wait_for(headers_received.wait(), 5)
+        task.cancel()
+
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    finally:
+        task.cancel()
+
+
+@pytest.mark.asyncio
 async def test_forbid_private_methods(aiohttp_client):
     """Test that we can't call private methods (those starting with '_')."""
     def create_app():

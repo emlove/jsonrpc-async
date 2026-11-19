@@ -44,9 +44,11 @@ class Server(jsonrpc_base.Server):
 
         try:
             response_data = await response.json(**self._json_args)
-        except ValueError as value_error:
+        except (ValueError, aiohttp.ContentTypeError) as error:
             raise TransportError(
-                'Cannot deserialize response body', message, value_error)
+                'Cannot deserialize response body', message, error)
+        except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+            raise TransportError('Transport Error', message, exc)
 
         return message.parse_response(response_data)
 
